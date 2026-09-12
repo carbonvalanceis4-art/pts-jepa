@@ -1,76 +1,41 @@
 # PTS-JEPA
 
-**Petrographic Thin Section JEPA** — a lightweight research codebase for testing whether self-supervised Joint-Embedding Predictive Architectures can learn useful representations for mineral identification in petrographic thin sections.
+Research codebase for self-supervised computer vision on petrographic thin-section imagery.
 
-## Research question
+## Current benchmark
 
-> Can JEPA-style self-supervised pretraining improve mineral-grain classification, especially when labeled petrographic training data are limited?
+The first controlled benchmark compares:
 
-## Initial benchmark plan
+- ResNet-18 (supervised CNN baseline)
+- ViT-Tiny (supervised transformer baseline)
+- I-JEPA-Tiny (self-supervised representation-learning model)
 
-### Phase 1: inexpensive proof of concept
-Dataset: MUMDMC2025-compatible image folders.
+The first dataset is the public 2,500-image XPL subset of MUMDMC2025. The dataset paper describes five mineral classes and a public cropped subset of 500 images per class. The full collection contains 14,400 images acquired at 72 rotations under PPL and XPL. We keep the images out of git and provide reproducible acquisition/manifest code instead.
 
-Compare:
-- ResNet-18 supervised baseline
-- ViT-Tiny supervised baseline
-- I-JEPA-Tiny pretraining + linear probe
+## Get the MUMDMC2025 subset
 
-Primary metrics:
-- accuracy
-- macro-F1
-- per-class F1
-- confusion matrix
-- training time
-- parameter count
+See [`data/README.md`](data/README.md). Two supported workflows are implemented:
 
-### Phase 2: label-efficiency experiment
-Evaluate downstream classifiers using 1%, 5%, 10%, 25%, 50%, and 100% of available labels.
-
-### Phase 3: rotation-aware experiment
-Use specimen-aware splits and rotational metadata to test whether multi-orientation observations improve classification.
-
-## Important experimental rule
-
-Do **not** randomly split near-duplicate rotational images from the same specimen across training and test sets. Splits should be specimen/crystal aware whenever metadata permit this.
-
-## Repository status
-
-This repository is being built as a small, reproducible research prototype. It intentionally does not attempt to reproduce the large-scale compute configuration of the original I-JEPA work.
-
-## Planned layout
-
-```text
-pts-jepa/
-├── configs/
-├── data/
-├── models/
-├── training/
-├── evaluation/
-├── experiments/
-├── tests/
-└── notebooks/
-```
-
-## Quick start
+### Automatic Figshare download
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
-pip install -r requirements.txt
+python data/prepare_mumdmc.py --download
 ```
 
-Dataset preparation and training commands will be added as the prototype is implemented.
+### Use a downloaded/uploaded archive
 
-## Intended datasets
+```bash
+python data/prepare_mumdmc.py --local-source /path/to/MUMDMC2025_DataSet_sample.zip
+```
 
-The code will support adapters rather than bundling datasets:
-- MUMDMC2025 for mineral classification and rotation experiments
-- LITHOS for larger-scale grain-level benchmarking
-- DeepCarbonate as a separate petrographic/lithological generalization task
+The preparation step creates `data/manifests/mumdmc2025.csv` and a JSON summary. Dataset files are ignored by git.
 
-Dataset licenses and access requirements remain the responsibility of the user.
+## Research integrity
 
-## Research principle
+The benchmark must avoid data leakage. Repeated views of the same specimen/crystal must not cross train/validation/test boundaries. When reliable specimen metadata are available, the split should be group-aware. Without such metadata, the preparation step uses conservative filename-based grouping and flags the limitation.
 
-The goal is not to prove that JEPA is automatically superior. The goal is to run a fair benchmark in which JEPA can succeed or fail against strong baselines.
+## Provenance
+
+Amer, B. G., Mousa, H. M., Dawoud, M., & Youssef, A. (2025). *A Photomicrographic Dataset of Rocks for the Accurate Classification of Minerals*. Scientific Data, 12, 1775. DOI: 10.1038/s41597-025-05879-9.
+
+Dataset: Amer, B. G. *MUMDMC2025_DataSet_sample*. Figshare (2025). DOI: 10.6084/m9.figshare.29483204.v1.
