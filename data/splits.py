@@ -9,16 +9,11 @@ from sklearn.model_selection import GroupShuffleSplit
 
 
 def parse_mumdmc_filename(path: str) -> dict[str, str]:
-    """Parse the documented MUMDMC filename convention when possible.
-
-    Example documented pattern: F52-Biotite-CN-1-1-0deg.
-    The final field is the rotation angle. The remaining identifiers are retained
-    so the research group can exclude angle while preserving crystal identity.
-    """
+    """Parse the documented MUMDMC filename convention when possible."""
     stem = Path(path).stem
     parts = stem.split("-")
     angle = parts[-1] if parts and re.fullmatch(r"\d+(?:deg)?", parts[-1], re.I) else ""
-    parsed = {
+    return {
         "slide_id": parts[0] if len(parts) > 0 else "",
         "mineral_token": parts[1] if len(parts) > 1 else "",
         "polarization_token": parts[2] if len(parts) > 2 else "",
@@ -26,7 +21,6 @@ def parse_mumdmc_filename(path: str) -> dict[str, str]:
         "photo_id": parts[4] if len(parts) > 4 else "",
         "angle": angle,
     }
-    return parsed
 
 
 def add_research_columns(frame: pd.DataFrame) -> pd.DataFrame:
@@ -34,9 +28,6 @@ def add_research_columns(frame: pd.DataFrame) -> pd.DataFrame:
     parsed = out["path"].map(parse_mumdmc_filename).apply(pd.Series)
     for col in parsed.columns:
         out[col] = parsed[col]
-
-    # Group excludes rotation angle. For the cropped XPL subset this protects
-    # against multiple views of the same underlying grain if present.
     out["research_group"] = (
         out["slide_id"].fillna("").astype(str)
         + "|"
@@ -50,10 +41,10 @@ def add_research_columns(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def group_split(frame: pd.DataFrame, test_size: float = 0.15, val_size: float = 0.15, seed: int = 42):
-    """Return train/val/test frames with zero group overlap."""
+    """Return train/val/test frames with zero research-group overlap."""
     if "research_group" not in frame.columns:
         frame = add_research_columns(frame)
-    if frame["research_group"].eq("|||\").any():
+    if frame["research_group"].eq("|||").any():
         raise ValueError("Could not derive useful research groups from filenames")
 
     outer = GroupShuffleSplit(n_splits=1, test_size=test_size, random_state=seed)
